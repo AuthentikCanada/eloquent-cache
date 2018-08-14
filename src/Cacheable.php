@@ -35,12 +35,15 @@ trait Cacheable {
         return new CacheQueryBuilder($query, $this);
     }
 
-
     public function refresh() {
     	$keyName = $this->getKeyName();
 
     	Cache::tags($this->cacheTagName)->forget($this->{$keyName});
 
     	return parent::refresh();
+    }
+
+    public static function flush() {
+        Cache::tags($this->cacheTagName)->flush();
     }
 }

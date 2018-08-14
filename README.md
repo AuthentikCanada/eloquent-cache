@@ -43,3 +43,9 @@ To invalidate the cache for a model instance, use the `refresh` method.
 ```php
 Category::find([1, 2, 3])->refresh();
 ```
+
+To invalidate the cache for all instances of a model, use the `flush` method.
+
+```php
+Category::flush();
+```
