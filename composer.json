@@ -1,0 +1,24 @@
+{
+	"name": "authentik/eloquent-cache",
+	"description": "",
+	"keywords": [
+		"laravel",
+		"eloquent",
+		"model",
+		"redis",
+		"cache"
+	],
+	"require-dev": {
+		"phpunit/phpunit": "~7.0"
+	},
+	"require": {
+		"php": ">=7.0.0",
+		"illuminate/cache": ">=5.5",
+		"illuminate/database": ">=5.5"
+	},
+	"autoload": {
+		"psr-4": {
+			"Authentik\\EloquentCache\\": "src/"
+		}
+	}
+}
