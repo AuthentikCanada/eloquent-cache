@@ -12,4 +12,8 @@ class Category extends Model {
 	public function isStaticCacheEnabled() {
         return false;
     }
+
+    public function parent() {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
 }

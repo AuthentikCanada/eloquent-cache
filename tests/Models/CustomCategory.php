@@ -1,13 +1,8 @@
 <?php
 namespace Tests\Models;
 
-use Authentik\EloquentCache\Cacheable;
-use Illuminate\Database\Eloquent\Model;
-
-class CustomCategory extends Model {
+class CustomCategory extends Category {
 	protected $table = 'category';
-
-	use Cacheable;
 
 	public function getCacheTTL() {
         return 5;
@@ -19,5 +14,9 @@ class CustomCategory extends Model {
 
     public function isCacheBustingEnabled() {
         return $GLOBALS['cache_busting'];
+    }
+
+    public function isStaticCacheEnabled() {
+        return true;
     }
 }

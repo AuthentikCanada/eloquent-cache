@@ -186,4 +186,22 @@ class CacheableTest extends TestCase
         $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [0]));
         $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [99]));
     }
+
+    public function testRelation() {
+        $instance = Category::first();
+        $builder = $instance->newQueryWithoutScopes();
+
+        $instance->parent_id = 20;
+        $instance = $instance->parent;
+
+        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+
+        $cachedInstance = $this->invokeMethod($builder, 'getCachedInstance', [$instance->id]);
+
+        $this->assertInstanceOf(Category::class, $instance);
+        $this->assertInstanceOf(Category::class, $cachedInstance);
+
+        $this->assertEquals(20, $instance->id);
+        $this->assertEquals(20, $cachedInstance->id);
+    }
 }

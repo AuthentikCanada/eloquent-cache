@@ -59,7 +59,8 @@ class Category extends Model
         return false;
     }
 
-    // Whether or not to keep model instances in a static array cache (useful to avoid querying the cache store/building instances from json multiple times)
+    // Whether or not to keep model instances in a static array cache
+    //  (useful to avoid querying the cache store/building instances from json multiple times)
     // default value: true
     public function isStaticCacheEnabled() {
         return false;
@@ -73,10 +74,11 @@ class Category extends Model
 Category::find(1)->cache();
 ```
 
-- To invalidate the cache for a model instance, use the `refresh` method.
+- To invalidate the cache for a model instance, use the `refresh` or `flush` method.
 
 ```php
-Category::find([1, 2, 3])->each->refresh();
+$refreshedInstance = Category::find(1)->refresh();
+Category::flush(Category::find(1));
 ```
 
 - To invalidate the cache for all instances of a model, use the `flush` method.
