@@ -8,4 +8,4 @@ matrix:
           env: LARAVEL_VERSION=5.5
 
 script:
-    - ./tests/init-${LARAVEL_VERSION}.sh
+    - ./tests/init-${LARAVEL_VERSION}.sh && vendor/bin/phpunit
