@@ -1,7 +1,7 @@
 {
     "name": "authentik/eloquent-cache",
     "description": "Easily cache your Laravel's Eloquent models",
-    "license": "GNU GPL 3",
+    "license": "GPL-3.0-only",
     "keywords": [
         "laravel",
         "eloquent",
