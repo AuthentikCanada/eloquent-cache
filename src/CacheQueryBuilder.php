@@ -8,8 +8,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class CacheQueryBuilder extends Builder {
-	public function get($columns = ['*']) {
-		if (count($columns) != 1 || $columns[0] != '*') {
+    public static $staticCache = [];
+
+    public function __construct($query, $model)
+    {
+        parent::__construct($query);
+
+        $tagName = $model->getCacheTagName();
+        if ($model->isStaticCacheEnabled() && !isset(self::$staticCache[$tagName])) {
+            self::$staticCache[$tagName] = [];
+        }
+    }
+
+    public function saveStaticCache($instance) {
+        if ($instance->isStaticCacheEnabled()) {
+            $tagName = $instance->getCacheTagName();
+            $keyName = $instance->getKeyName();
+
+            self::$staticCache[$tagName][$instance->{$keyName}] = $instance;
+        }
+    }
+
+    public function get($columns = ['*']) {
+        if (count($columns) != 1 || $columns[0] != '*') {
             return parent::get($columns);
         }
 
@@ -27,11 +48,12 @@ class CacheQueryBuilder extends Builder {
             $instance = $this->getCachedInstance($keyValue);
 
             if (!$instance) {
-                if (is_null($instance = $this->getInstance())) {
+                if (is_null($instance = $this->getInstance($keyValue))) {
                     return $results;
                 }
 
                 $instance->cache();
+                $this->saveStaticCache($instance);
             }
 
             $results->push($instance);
@@ -41,13 +63,11 @@ class CacheQueryBuilder extends Builder {
 
             $notFound = [];
 
-            foreach ($where['values'] as $keyValue) {
-                $instance = $this->getCachedInstance($keyValue);
-
+            foreach ($w['values'] as $keyValue) {
                 if (!is_null($instance = $this->getCachedInstance($keyValue))) {
                     $results->push($instance);
                 } else {
-                	$notFound[] = $keyValue;
+                    $notFound[] = $keyValue;
                 }
             }
 
@@ -56,10 +76,13 @@ class CacheQueryBuilder extends Builder {
 
                 $this->query->wheres = [];
                 $this->query->bindings['where'] = [];
-                $this->query->whereIn($where['column'], $notFound);
+                $this->query->whereIn($w['column'], $notFound);
 
                 $notFoundInstances = parent::get($columns);
-                $notFoundInstances->each->cache();
+                $notFoundInstances->each(function ($instance) {
+                    $instance->cache();
+                    $this->saveStaticCache($instance);
+                });
 
                 if (!$notFoundInstances->isEmpty()) {
                     $results = $results->merge($notFoundInstances);
@@ -70,47 +93,7 @@ class CacheQueryBuilder extends Builder {
         }
 
         return parent::get($columns);
-	}
-
-	/*
-	public function update(array $values) {
-		if ($this->model->cacheBusting) {
-            $this->clearCacheBasedOnQuery();
-	    }
-        
-        return parent::update($values);
-	}
-
-
-	public function delete() {
-		if ($this->model->cacheBusting) {
-            $this->clearCacheBasedOnQuery();
-	    }
-        
-        return parent::delete();
-	}
-
-
-	protected function clearCacheBasedOnQuery() {
-		if (!$this->isBasicQuery()) {
-			return;
-		}
-
-        $w = $this->getQuery()->wheres[0];
-
-        if ($w['type'] == 'Basic' && $w['operator'] == '=') {
-            $keyValue = $w['value'];
-
-            Cache::tags($this->model->getCacheTagName())->forget($keyValue);
-
-        } else if ($w['type'] == 'In') {
-
-            foreach ($w['values'] as $keyValue) {
-                Cache::tags($this->model->getCacheTagName())->forget($keyValue);
-            }
-        }
     }
-    */
 
 
     /*
@@ -120,27 +103,37 @@ class CacheQueryBuilder extends Builder {
      * - FROM `table` WHERE key IN (x1, x2)
      */
     protected function isBasicQuery() {
-    	$query = $this->getQuery();
+        $query = $this->getQuery();
 
-    	if (is_null($query->wheres) || count($query->wheres) != 1) {
-    		return false;
-    	}
+        if (is_null($query->wheres) || count($query->wheres) != 1) {
+            return false;
+        }
 
-    	$where = $query->wheres[0];
+        $w = $query->wheres[0];
 
-    	$model = $this->getModel();
+        $model = $this->getModel();
         $table = $model->getTable();
         $keyName = $model->getKeyName();
 
-    	return in_array($w['type'], ['Basic', 'In']) && ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName);
+        return in_array($w['type'], ['Basic', 'In']) && ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName);
     }
 
 
     /*
      * Retrieves a model instance from the cache, by ID.
      */
-	protected function getCachedInstance($keyValue) {
-		$model = $this->getModel();
+    protected function getCachedInstance($keyValue) {
+        $model = $this->getModel();
+
+        $tagName = $model->getCacheTagName();
+
+        if ($model->isStaticCacheEnabled()) {
+            $keyName = $model->getKeyName();
+
+            if (isset(self::$staticCache[$tagName][$model->{$keyName}])) {
+                return self::$staticCache[$tagName][$model->{$keyName}];
+            }
+        }
 
         $cached = Cache::tags($model->getCacheTagName())->get($keyValue);
 

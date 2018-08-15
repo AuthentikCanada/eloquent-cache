@@ -20,29 +20,34 @@ trait Cacheable {
     }
 
 
-	public static function boot() {
-		static::saved(function ($model) {
+    public function isStaticCacheEnabled() {
+        return true;
+    }
+
+
+    public static function boot() {
+        static::saved(function ($model) {
             if ($model->isCacheBustingEnabled()) {
                 self::flush($model);
             }
-		});
+        });
 
-		static::deleted(function ($model) {
+        static::deleted(function ($model) {
             if ($model->isCacheBustingEnabled()) {
                 self::flush($model);
             }
-		});
+        });
 
-		parent::boot();
-	}
+        parent::boot();
+    }
 
 
-	/**
+    /**
      * Create a new Cache query builder for the model.
      */
     public function newEloquentBuilder($query)
     {
-        return new CacheQueryBuilder($query);
+        return new CacheQueryBuilder($query, $this);
     }
 
 
@@ -68,20 +73,36 @@ trait Cacheable {
 
 
     public function refresh() {
-    	self::flush($this);
+        self::flush($this);
 
-    	return parent::refresh();
+        return parent::refresh();
     }
 
 
     public static function flush($model = null) {
         if (is_null($model)) {
-            Cache::tags($model->getCacheTagName())->flush();
+            $model = new static;
+            $tagName = $model->getCacheTagName();
+
+            Cache::tags($tagName)->flush();
+
+            if ($model->isStaticCacheEnabled()) {
+                CacheQueryBuilder::$staticCache[$tagName] = [];
+            }
 
         } else {
-            $keyName = $model->getKeyName();
+            $tagName = $model->getCacheTagName();
 
-            Cache::tags($model->getCacheTagName())->forget($model->{$keyName});
+            $keyName = $model->getKeyName();
+            $keyValue = $model->{$keyName};
+
+            Cache::tags($tagName)->forget($keyValue);
+
+            if ($model->isStaticCacheEnabled()) {
+                if (isset(CacheQueryBuilder::$staticCache[$tagName][$keyValue])) {
+                    unset(CacheQueryBuilder::$staticCache[$tagName][$keyValue]);
+                }
+            }
         }
     }
 }

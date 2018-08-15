@@ -16,9 +16,9 @@ Install via [composer](https://getcomposer.org/) :
 
 ## How it works
 
-- When eloquent fetches models by ID (without eager-loading), the JSON representations of the model instances are cached.
+- When Eloquent fetches one or many models by ID (without eager-loading), the JSON representations of the model instances are cached.
 
-- Subsequently, when eloquent fetches models by ID, the cached JSON representation will be converted into an instance;
+- Subsequently, when eloquent fetches a model by ID, the cached JSON will be converted back into an instance.
 
 ## Usage
 
@@ -56,6 +56,12 @@ class Category extends Model
     // Cache busting will automatically invalidate the cache when model instances are updated or deleted.
     // default value: true
     public function isCacheBustingEnabled() {
+        return false;
+    }
+
+    // Whether or not to keep model instances in a static array cache (useful to avoid querying the cache store/building instances from json multiple times)
+    // default value: true
+    public function isStaticCacheEnabled() {
         return false;
     }
 }
