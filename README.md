@@ -2,11 +2,15 @@
 
 > Easily cache your Laravel's Eloquent models.
 
+[![Build Status](https://travis-ci.org/authentik/eloquent-cache.svg?branch=master)](https://travis-ci.org/authentik/eloquent-cache)
+[![Latest Stable Version](https://poser.pugx.org/authentik/eloquent-cache/v/stable.svg)](https://packagist.org/packages/authentik/eloquent-cache)
+[![Total Downloads](https://poser.pugx.org/authentik/eloquent-cache/downloads.svg)](https://packagist.org/packages/authentik/eloquent-cache)
+
 ## Requirements
 
-- PHP 7.2
+- PHP>=7.0
 
-- Laravel 5.6
+- Laravel 5.5 or 5.6
 
 ## Installation
 

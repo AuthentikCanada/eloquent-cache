@@ -5,6 +5,7 @@ use Orchestra\Testbench\TestCase;
 use Illuminate\Support\Facades\Cache;
 use Tests\Models\{Category, CustomCategory};
 use Authentik\EloquentCache\CacheQueryBuilder;
+use Orchestra\Database\ConsoleServiceProvider;
 
 class CacheableTest extends TestCase
 {
@@ -17,6 +18,13 @@ class CacheableTest extends TestCase
         factory(Category::class, 20)->create();
 
         $GLOBALS['cache_busting'] = true;
+    }
+
+    protected function getPackageProviders($app)
+    {
+        return [
+            ConsoleServiceProvider::class,
+        ];
     }
     
 
