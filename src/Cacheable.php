@@ -5,22 +5,32 @@ namespace Authentik\EloquentCache;
 use Illuminate\Support\Facades\Cache;
 
 trait Cacheable {
-    public $cacheTTL = 0; 
-    public $cacheTagName = '';
-    public $cacheBusting = true;
+    public function getCacheTTL() {
+        return 0;
+    }
+
+
+    public function getCacheTagName() {
+        return strtolower((new \ReflectionClass($this))->getShortName());
+    }
+
+
+    public function isCacheBustingEnabled() {
+        return true;
+    }
 
 
 	public static function boot() {
-		if (empty($this->cacheTagName)) {
-			$this->cacheTagName = strtolower((new \ReflectionClass($this))->getShortName());
-		}
-
 		static::saved(function ($model) {
-			$model->refresh();
+            if ($model->isCacheBustingEnabled()) {
+                self::flush($model);
+            }
 		});
 
 		static::deleted(function ($model) {
-			$model->refresh();
+            if ($model->isCacheBustingEnabled()) {
+                self::flush($model);
+            }
 		});
 
 		parent::boot();
@@ -32,18 +42,46 @@ trait Cacheable {
      */
     public function newEloquentBuilder($query)
     {
-        return new CacheQueryBuilder($query, $this);
+        return new CacheQueryBuilder($query);
     }
 
-    public function refresh() {
-    	$keyName = $this->getKeyName();
 
-    	Cache::tags($this->cacheTagName)->forget($this->{$keyName});
+    public function cache() {
+        $keyName = $this->getKeyName();
+        $keyValue = $this->{$keyName};
+
+        if ($this->getCacheTTL() > 0) {
+
+            Cache::tags($this->getCacheTagName())
+                ->remember($keyValue, $this->getCacheTTL(), function () {
+                    return $this->toArray();
+                });
+
+        } else {
+
+            Cache::tags($this->getCacheTagName())
+                ->rememberForever($keyValue, function () {
+                    return $this->toArray();
+                });
+        }
+    }
+
+
+    public function refresh() {
+    	self::flush($this);
 
     	return parent::refresh();
     }
 
-    public static function flush() {
-        Cache::tags($this->cacheTagName)->flush();
+
+    public static function flush($model = null) {
+        if (is_null($model)) {
+            Cache::tags($model->getCacheTagName())->flush();
+
+        } else {
+            $keyName = $model->getKeyName();
+
+            Cache::tags($model->getCacheTagName())->forget($model->{$keyName});
+        }
     }
 }

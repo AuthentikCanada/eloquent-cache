@@ -8,15 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class CacheQueryBuilder extends Builder {
-	protected $model;
-
-	public function __construct($query, Model $model) {
-		$this->model = $model;
-
-		parent::__construct($query);
-	}
-
-
 	public function get($columns = ['*']) {
 		if (count($columns) != 1 || $columns[0] != '*') {
             return parent::get($columns);
@@ -33,20 +24,17 @@ class CacheQueryBuilder extends Builder {
         if ($w['type'] == 'Basic' && $w['operator'] == '=') {
 
             $keyValue = $w['value'];
-            $model = $this->getCachedInstance($keyValue);
+            $instance = $this->getCachedInstance($keyValue);
 
-            if (!$model) {
-                $model = $this->getInstance();
-
-                if (!$model) {
+            if (!$instance) {
+                if (is_null($instance = $this->getInstance())) {
                     return $results;
                 }
 
-                Cache::tags($this->model->cacheTagName)->remember($keyValue, $this->model->cacheTTL, $model->toArray());
+                $instance->cache();
             }
 
-            $results->push($model);
-
+            $results->push($instance);
             return $results;
 
         } else if ($w['type'] == 'In') {
@@ -54,30 +42,27 @@ class CacheQueryBuilder extends Builder {
             $notFound = [];
 
             foreach ($where['values'] as $keyValue) {
-                $model = $this->getCachedInstance($keyValue);
+                $instance = $this->getCachedInstance($keyValue);
 
-                if (is_null($model)) {
-                    $notFound[] = $keyValue;
+                if (!is_null($instance = $this->getCachedInstance($keyValue))) {
+                    $results->push($instance);
                 } else {
-                	$results->push($model);
+                	$notFound[] = $keyValue;
                 }
             }
 
-            // Search for the missing models in the DB
+            // search for the not-cached model instances in the DB
             if (!empty($notFound)) {
 
                 $this->query->wheres = [];
                 $this->query->bindings['where'] = [];
                 $this->query->whereIn($where['column'], $notFound);
 
-                $dbResults = parent::get($columns);
+                $notFoundInstances = parent::get($columns);
+                $notFoundInstances->each->cache();
 
-                if (!$dbResults->isEmpty()) {
-                    $results = $results->merge($dbResults);
-                }
-
-                foreach ($dbResults as $r) {
-                    Cache::tags($this->model->cacheTagName)->remember($keyValue, $this->model->cacheTTL, $r->toArray());
+                if (!$notFoundInstances->isEmpty()) {
+                    $results = $results->merge($notFoundInstances);
                 }
             }
 
@@ -87,7 +72,7 @@ class CacheQueryBuilder extends Builder {
         return parent::get($columns);
 	}
 
-
+	/*
 	public function update(array $values) {
 		if ($this->model->cacheBusting) {
             $this->clearCacheBasedOnQuery();
@@ -116,15 +101,16 @@ class CacheQueryBuilder extends Builder {
         if ($w['type'] == 'Basic' && $w['operator'] == '=') {
             $keyValue = $w['value'];
 
-            Cache::tags($this->model->cacheTagName)->forget($keyValue);
+            Cache::tags($this->model->getCacheTagName())->forget($keyValue);
 
         } else if ($w['type'] == 'In') {
 
             foreach ($w['values'] as $keyValue) {
-                Cache::tags($this->model->cacheTagName)->forget($keyValue);
+                Cache::tags($this->model->getCacheTagName())->forget($keyValue);
             }
         }
     }
+    */
 
 
     /*
@@ -133,7 +119,7 @@ class CacheQueryBuilder extends Builder {
      * - FROM `table` WHERE key = x
      * - FROM `table` WHERE key IN (x1, x2)
      */
-    protected function isBasicQuery($query) {
+    protected function isBasicQuery() {
     	$query = $this->getQuery();
 
     	if (is_null($query->wheres) || count($query->wheres) != 1) {
@@ -154,14 +140,18 @@ class CacheQueryBuilder extends Builder {
      * Retrieves a model instance from the cache, by ID.
      */
 	protected function getCachedInstance($keyValue) {
-        $cached = Cache::tags($this->model->cacheTagName)->get($keyValue);
+		$model = $this->getModel();
+
+        $cached = Cache::tags($model->getCacheTagName())->get($keyValue);
 
         if ($cached) {
-            $model = $this->getModel()->newInstance([], true);
-            $cached = $model->forceFill($cached);
+            $instance = $model->newInstance([], true);
+            $instance = $instance->forceFill($cached);
+
+            return $instance;
         }
         
-        return $cached;
+        return null;
     }
 
 
