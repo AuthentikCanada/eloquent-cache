@@ -28,8 +28,6 @@ Install via [composer](https://getcomposer.org/) :
 
 Use the `Cacheable` trait in the models you want to cache.
 
-You can optionally define another TTL or tag name.
-
 ```php
 <?php
 
@@ -72,20 +70,23 @@ class Category extends Model
 }
 ```
 
-- To manually cache a model instance, use the `cache` method.
+> To manually cache a model instance, use the `cache` method.
 
 ```php
 Category::find(1)->cache();
 ```
 
-- To invalidate the cache for a model instance, use the `refresh` or `flush` method.
+> To invalidate the cache for a model instance, use the `refresh` or `flush` method.
 
 ```php
 $refreshedInstance = Category::find(1)->refresh();
+
+// or
+
 Category::flush(Category::find(1));
 ```
 
-- To invalidate the cache for all instances of a model, use the `flush` method.
+> To invalidate the cache for all instances of a model, use the `flush` method.
 
 ```php
 Category::flush();
