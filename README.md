@@ -3,6 +3,7 @@
 > Easily cache your Laravel's Eloquent models.
 
 [![Build Status](https://travis-ci.org/AuthentikCanada/eloquent-cache.svg?branch=master)](https://travis-ci.org/AuthentikCanada/eloquent-cache)
+[![Coverage Status](https://coveralls.io/repos/github/AuthentikCanada/eloquent-cache/badge.svg?branch=master)](https://coveralls.io/github/AuthentikCanada/eloquent-cache?branch=master)
 [![Latest Stable Version](https://poser.pugx.org/authentik/eloquent-cache/v/stable.svg)](https://packagist.org/packages/authentik/eloquent-cache)
 [![Total Downloads](https://poser.pugx.org/authentik/eloquent-cache/downloads.svg)](https://packagist.org/packages/authentik/eloquent-cache)
 
