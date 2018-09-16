@@ -2,8 +2,6 @@
 namespace Tests\Models;
 
 class CustomCategory extends Category {
-	protected $table = 'category';
-
 	public function getCacheTTL() {
         return 5;
     }

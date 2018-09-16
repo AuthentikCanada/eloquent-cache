@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Tests\Models\{Category, CustomCategory};
 use Authentik\EloquentCache\CacheQueryBuilder;
 use Orchestra\Database\ConsoleServiceProvider;
+use Illuminate\Database\Eloquent\Model;
 
 class CacheableTest extends TestCase
 {
@@ -46,21 +47,26 @@ class CacheableTest extends TestCase
         return $method->invokeArgs($object, $parameters);
     }
 
+    protected function getCachedInstance(Model $model, $id) {
+        $builder = $model->newQueryWithoutScopes();
+
+        return $this->invokeMethod($builder, 'getCachedInstance', [$id]);
+    }
 
     public function testCache() {
-        $instance = Category::inRandomOrder()->first();
+        $instance = $model = Category::inRandomOrder()->first();
         $builder = $instance->newQueryWithoutScopes();
 
         $this->assertInstanceOf(\Authentik\EloquentCache\CacheQueryBuilder::class, $builder);
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNull($this->getCachedInstance($model, $instance->id));
 
 
         // Cache the instance
         $instance->cache();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
         $this->assertArrayNotHasKey('category', CacheQueryBuilder::$staticCache);
 
-        $cachedInstance = $this->invokeMethod($builder, 'getCachedInstance', [$instance->id]);
+        $cachedInstance = $this->getCachedInstance($model, $instance->id);
         $this->assertTrue($cachedInstance->is($instance));
         $this->assertEquals($instance->toArray(), $cachedInstance->toArray());
 
@@ -72,16 +78,16 @@ class CacheableTest extends TestCase
         $ids = [1, 5];
 
         $instances = Category::find($ids);
-        $builder = $instances->first()->newQueryWithoutScopes();
+        $model = $instances->first();
 
         foreach ($ids as $id) {
-            $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$id]));
+            $this->assertNotNull($this->getCachedInstance($model, $id));
         }
 
         Category::flush();
 
         foreach ($ids as $id) {
-            $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$id]));
+            $this->assertNull($this->getCachedInstance($model, $id));
         }
     }
 
@@ -93,23 +99,23 @@ class CacheableTest extends TestCase
         ];
 
         foreach ($instances as $instance) {
-            $builder = $instance->newQueryWithoutScopes();
+            $model = $instance;
 
             $instance->cache();
-            $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+            $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
 
             $instance->name .= '-suffix';
             $instance->save();
-            $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+            $this->assertNull($this->getCachedInstance($model, $instance->id));
 
 
             $instance->cache();
-            $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+            $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
 
             $instance->delete();
-            $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+            $this->assertNull($this->getCachedInstance($model, $instance->id));
         }
     }
 
@@ -118,21 +124,21 @@ class CacheableTest extends TestCase
         $ids = [3, 6];
 
         $instances = CustomCategory::whereIn('id', $ids)->get();
-        $builder = $instances->first()->newQueryWithoutScopes();
+        $model = $instances->first();
 
         $this->assertArrayHasKey('custom_category', CacheQueryBuilder::$staticCache);
 
         foreach ($ids as $id) {
-            $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$id]));
+            $this->assertNotNull($this->getCachedInstance($model, $id));
             $this->assertArrayHasKey($id, CacheQueryBuilder::$staticCache['custom_category']);
         }
 
-        CustomCategory::flush($instances->firstWhere('id', $ids[0]));
+        CustomCategory::flush($instances->where('id', $ids[0])->first());
 
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$ids[0]]));    
+        $this->assertNull($this->getCachedInstance($model, $ids[0]));   
         $this->assertArrayNotHasKey($ids[0], CacheQueryBuilder::$staticCache['custom_category']);
 
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$ids[1]]));    
+        $this->assertNotNull($this->getCachedInstance($model, $ids[1]));   
         $this->assertArrayHasKey($ids[1], CacheQueryBuilder::$staticCache['custom_category']);
 
 
@@ -140,7 +146,7 @@ class CacheableTest extends TestCase
         CustomCategory::flush();
 
         foreach ($ids as $id) {
-            $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$id]));    
+            $this->assertNull($this->getCachedInstance($model, $id));   
             $this->assertArrayNotHasKey($id, CacheQueryBuilder::$staticCache['custom_category']);
         }
     }
@@ -149,40 +155,37 @@ class CacheableTest extends TestCase
     public function testNoCacheBusting() {
         $GLOBALS['cache_busting'] = false;
 
-        $instance = CustomCategory::inRandomOrder()->first();
-        $builder = $instance->newQueryWithoutScopes();
+        $instance = $model = CustomCategory::inRandomOrder()->first();
 
         $instance->cache();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
 
         $instance->name .= '-suffix';
         $instance->save();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
 
         CustomCategory::flush($instance);
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNull($this->getCachedInstance($model, $instance->id));
 
         $instance->cache();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
         $instance->delete();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
     }
 
     public function testNonExistingInstances() {
-        $instance = Category::find(2)->refresh();
-        $builder = $instance->newQueryWithoutScopes();
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [2]));
+        $instance = $model = Category::find(2)->refresh();
+        $this->assertNotNull($this->getCachedInstance($model, 2));
 
 
         Category::find(2);
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [2]));
+        $this->assertNotNull($this->getCachedInstance($model, 2));
 
-        $instance = Category::find(99);
-        $this->assertNull($instance);
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [99]));
+        $this->assertNull(Category::find(99));
+        $this->assertNull($this->getCachedInstance($model, 99));
 
         Category::flush();
 
@@ -190,26 +193,45 @@ class CacheableTest extends TestCase
         $this->assertEquals(1, $instances->count());
         $this->assertEquals(2, $instances->first()->id);
 
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [2]));
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [0]));
-        $this->assertNull($this->invokeMethod($builder, 'getCachedInstance', [99]));
+        $this->assertNotNull($this->getCachedInstance($model, 2));
+        $this->assertNull($this->getCachedInstance($model, 0));
+        $this->assertNull($this->getCachedInstance($model, 99));
     }
 
     public function testRelation() {
-        $instance = Category::first();
-        $builder = $instance->newQueryWithoutScopes();
+        $instance = $model = Category::first();
 
         $instance->parent_id = 20;
         $instance = $instance->parent;
 
-        $this->assertNotNull($this->invokeMethod($builder, 'getCachedInstance', [$instance->id]));
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
-        $cachedInstance = $this->invokeMethod($builder, 'getCachedInstance', [$instance->id]);
+        $cachedInstance = $this->getCachedInstance($model, $instance->id);
 
         $this->assertInstanceOf(Category::class, $instance);
         $this->assertInstanceOf(Category::class, $cachedInstance);
 
         $this->assertEquals(20, $instance->id);
         $this->assertEquals(20, $cachedInstance->id);
+    }
+
+    public function testEagerLoading() {
+        $parentId = 20;
+
+        $instance = $model = Category::find(1);
+
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
+
+        $instance->parent_id = $parentId;
+        $instance->save();
+
+        $this->assertNotEquals($instance->parent_id, $instance->id);
+
+        $this->assertNull($this->getCachedInstance($model, $instance->id));
+
+        $instance = Category::with('parent')->find(1);
+
+        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
+        $this->assertNotNull($this->getCachedInstance($model, $parentId));
     }
 }

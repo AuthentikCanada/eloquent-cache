@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 class CacheQueryBuilder extends Builder {
     public static $staticCache = [];
 
-    public function __construct($query, $model)
+    public function __construct($query, Model $model)
     {
         parent::__construct($query);
 
@@ -34,8 +34,12 @@ class CacheQueryBuilder extends Builder {
             return parent::get($columns);
         }
 
-        if (count($this->eagerLoad) != 0 || !$this->isBasicQuery()) {
-            return parent::get($columns);
+        if (!$this->isBasicQuery()) {
+            $results = parent::get($columns);
+
+            // @todo: cache the results
+            
+            return $results;
         }
         
         $w = $this->getQuery()->wheres[0];
