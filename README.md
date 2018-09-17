@@ -21,7 +21,7 @@ Install via [composer](https://getcomposer.org/) :
 
 ## How it works
 
-- When Eloquent fetches one or many models by ID (without eager-loading), the JSON representations of the model instances are cached.
+- When Eloquent fetches models, the JSON representations of the model instances are cached.
 
 - Subsequently, when eloquent fetches a model by ID, the cached JSON will be converted back into an instance.
 
