@@ -19,7 +19,9 @@ trait Cacheable {
         return true;
     }
 
-
+    /**
+     * @codeCoverageIgnore
+     */
     public function isStaticCacheEnabled() {
         return true;
     }
@@ -55,19 +57,25 @@ trait Cacheable {
         $keyName = $this->getKeyName();
         $keyValue = $this->{$keyName};
 
+        $tagName = $this->getCacheTagName();
+
         if ($this->getCacheTTL() > 0) {
 
-            Cache::tags($this->getCacheTagName())
+            Cache::tags($tagName)
                 ->remember($keyValue, $this->getCacheTTL(), function () {
                     return $this->toArray();
                 });
 
         } else {
 
-            Cache::tags($this->getCacheTagName())
+            Cache::tags($tagName)
                 ->rememberForever($keyValue, function () {
                     return $this->toArray();
                 });
+        }
+
+        if ($this->isStaticCacheEnabled()) {
+            CacheQueryBuilder::$staticCache[$tagName][$keyValue] = $this;
         }
     }
 

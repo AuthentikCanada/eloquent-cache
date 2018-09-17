@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.1.0 - 2018-09-19
+## 1.1.0 - 2018-09-17
 
 - Cache models even if they have eagerloaded relations
 

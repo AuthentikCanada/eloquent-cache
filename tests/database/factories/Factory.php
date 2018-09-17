@@ -1,7 +1,7 @@
 <?php
 
 use Faker\Generator as Faker;
-use Tests\Models\{Category, CustomCategory};
+use Tests\Models\{Category, CustomCategory, Product};
 
 $factory->define(Category::class, function (Faker $faker) {
     return [
@@ -10,6 +10,12 @@ $factory->define(Category::class, function (Faker $faker) {
 });
 
 $factory->define(CustomCategory::class, function (Faker $faker) {
+    return [
+        'name' => $faker->word,
+    ];
+});
+
+$factory->define(Product::class, function (Faker $faker) {
     return [
         'name' => $faker->word,
     ];

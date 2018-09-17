@@ -3,7 +3,7 @@ namespace Tests;
 
 use Orchestra\Testbench\TestCase;
 use Illuminate\Support\Facades\Cache;
-use Tests\Models\{Category, CustomCategory};
+use Tests\Models\{Category, CustomCategory, Product};
 use Authentik\EloquentCache\CacheQueryBuilder;
 use Orchestra\Database\ConsoleServiceProvider;
 use Illuminate\Database\Eloquent\Model;
@@ -54,15 +54,10 @@ class CacheableTest extends TestCase
     }
 
     public function testCache() {
-        $instance = $model = Category::inRandomOrder()->first();
+        $instance = $model = Category::first();
         $builder = $instance->newQueryWithoutScopes();
 
         $this->assertInstanceOf(\Authentik\EloquentCache\CacheQueryBuilder::class, $builder);
-        $this->assertNull($this->getCachedInstance($model, $instance->id));
-
-
-        // Cache the instance
-        $instance->cache();
         $this->assertNotNull($this->getCachedInstance($model, $instance->id));
         $this->assertArrayNotHasKey('category', CacheQueryBuilder::$staticCache);
 
@@ -71,6 +66,9 @@ class CacheableTest extends TestCase
         $this->assertEquals($instance->toArray(), $cachedInstance->toArray());
 
         $this->assertTrue($cachedInstance->exists);
+
+        // Just for code coverage purposes
+        Category::find([1, 2]);
     }
 
 
@@ -233,5 +231,52 @@ class CacheableTest extends TestCase
 
         $this->assertNotNull($this->getCachedInstance($model, $instance->id));
         $this->assertNotNull($this->getCachedInstance($model, $parentId));
+
+        $cachedInstance = $this->getCachedInstance($model, $instance->id);
+
+        $this->assertTrue($cachedInstance->is($instance));
+    }
+
+    public function testComplicatedQueries() {
+        $model = Category::first();
+
+        $this->assertNotNull($this->getCachedInstance($model, 1));
+
+        Category::flush();
+
+
+        Category::where('id', '<', 3)->get();
+
+        $this->assertNotNull($this->getCachedInstance($model, 1));
+        $this->assertNotNull($this->getCachedInstance($model, 2));
+        $this->assertNull($this->getCachedInstance($model, 3));
+
+        Category::flush();
+
+
+        factory(Product::class)->make(['category_id' => 10])->save();
+        factory(Product::class)->make(['category_id' => 20])->save();
+
+        Category::addSelect([
+            'category.*'
+        ])
+        ->join('product', 'product.category_id', 'category.id')
+        ->get();
+
+        $this->assertNotNull($this->getCachedInstance($model, 10));
+        $this->assertNotNull($this->getCachedInstance($model, 20));
+
+        Category::flush();
+
+
+        Category::addSelect([
+            'category.id',
+            'product.*',
+        ])
+        ->join('product', 'product.category_id', 'category.id')
+        ->get();
+
+        $this->assertNull($this->getCachedInstance($model, 10));
+        $this->assertNull($this->getCachedInstance($model, 20));
     }
 }

@@ -30,14 +30,17 @@ class CacheQueryBuilder extends Builder {
     }
 
     public function get($columns = ['*']) {
-        if (count($columns) != 1 || $columns[0] != '*') {
+
+        if (!$this->isBasicSelect($columns)) {
             return parent::get($columns);
         }
 
         if (!$this->isBasicQuery()) {
             $results = parent::get($columns);
 
-            // @todo: cache the results
+            foreach ($results as $result) {
+                $result->cache();
+            }
             
             return $results;
         }
@@ -57,7 +60,6 @@ class CacheQueryBuilder extends Builder {
                 }
 
                 $instance->cache();
-                $this->saveStaticCache($instance);
             }
 
             $results->push($instance);
@@ -85,7 +87,6 @@ class CacheQueryBuilder extends Builder {
                 $notFoundInstances = parent::get($columns);
                 $notFoundInstances->each(function ($instance) {
                     $instance->cache();
-                    $this->saveStaticCache($instance);
                 });
 
                 if (!$notFoundInstances->isEmpty()) {
@@ -96,7 +97,9 @@ class CacheQueryBuilder extends Builder {
             return $results;
         }
 
+        // @codeCoverageIgnoreStart
         return parent::get($columns);
+        // @codeCoverageIgnoreEnd
     }
 
 
@@ -119,7 +122,21 @@ class CacheQueryBuilder extends Builder {
         $table = $model->getTable();
         $keyName = $model->getKeyName();
 
-        return in_array($w['type'], ['Basic', 'In']) && ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName);
+        return ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName) &&
+            ($w['type'] == 'In' || ($w['type'] == 'Basic' && $w['operator'] == '='));
+    }
+
+
+    /*
+     * Figures out if ONLY all the columns of the main model are selected
+     */
+    protected function isBasicSelect($columns) {
+        $selectedColumns = $this->getQuery()->columns ?: $columns;
+
+        $table = $this->getModel()->getTable();
+
+        return count($selectedColumns) == 1 &&
+            in_array($selectedColumns[0], ['*', $table.'.*']);
     }
 
 
@@ -156,13 +173,8 @@ class CacheQueryBuilder extends Builder {
      * Fetch a model instance by ID.
      */
     protected function getInstance($keyValue) {
-        if ($keyValue == 0) {
-            return null;
-        }
         $results = parent::get(['*']);
-        if ($results->count() == 0) {
-            return null;
-        }
-        return $results->first();
+
+        return $results->count() > 0 ? $results->first() : null;
     }
 }
