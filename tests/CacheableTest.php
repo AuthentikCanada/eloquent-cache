@@ -235,6 +235,7 @@ class CacheableTest extends TestCase
         $cachedInstance = $this->getCachedInstance($model, $instance->id);
 
         $this->assertTrue($cachedInstance->is($instance));
+        $this->assertInstanceOf(Category::class, $cachedInstance->parent);
     }
 
     public function testComplicatedQueries() {

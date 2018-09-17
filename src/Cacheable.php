@@ -63,14 +63,14 @@ trait Cacheable {
 
             Cache::tags($tagName)
                 ->remember($keyValue, $this->getCacheTTL(), function () {
-                    return $this->toArray();
+                    return $this->attributesToArray();
                 });
 
         } else {
 
             Cache::tags($tagName)
                 ->rememberForever($keyValue, function () {
-                    return $this->toArray();
+                    return $this->attributesToArray();
                 });
         }
 
