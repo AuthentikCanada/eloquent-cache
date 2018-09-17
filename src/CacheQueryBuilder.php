@@ -113,7 +113,8 @@ class CacheQueryBuilder extends Builder {
         $table = $model->getTable();
         $keyName = $model->getKeyName();
 
-        return ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName) &&
+        return isset($w['column']) &&
+            ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName) &&
             ($w['type'] == 'In' || ($w['type'] == 'Basic' && $w['operator'] == '='));
     }
 
