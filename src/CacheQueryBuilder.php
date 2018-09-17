@@ -20,15 +20,6 @@ class CacheQueryBuilder extends Builder {
         }
     }
 
-    public function saveStaticCache($instance) {
-        if ($instance->isStaticCacheEnabled()) {
-            $tagName = $instance->getCacheTagName();
-            $keyName = $instance->getKeyName();
-
-            self::$staticCache[$tagName][$instance->{$keyName}] = $instance;
-        }
-    }
-
     public function get($columns = ['*']) {
 
         if (!$this->isBasicSelect($columns)) {
