@@ -15,8 +15,8 @@ class CacheQueryBuilder extends Builder {
         parent::__construct($query);
 
         $tagName = $model->getCacheTagName();
-        if ($model->isStaticCacheEnabled() && !isset(self::$staticCache[$tagName])) {
-            self::$staticCache[$tagName] = [];
+        if ($model->isStaticCacheEnabled() && !isset(static::$staticCache[$tagName])) {
+            static::$staticCache[$tagName] = [];
         }
     }
 
@@ -143,8 +143,8 @@ class CacheQueryBuilder extends Builder {
         if ($model->isStaticCacheEnabled()) {
             $keyName = $model->getKeyName();
 
-            if (isset(self::$staticCache[$tagName][$model->{$keyName}])) {
-                return self::$staticCache[$tagName][$model->{$keyName}];
+            if (isset(static::$staticCache[$tagName][$model->{$keyName}])) {
+                return static::$staticCache[$tagName][$model->{$keyName}];
             }
         }
 

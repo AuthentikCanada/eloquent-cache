@@ -26,6 +26,10 @@ trait Cacheable {
         return true;
     }
 
+    public function useFullCache() {
+        return false;
+    }
+
 
     public static function boot() {
         static::saved(function ($model) {
@@ -49,7 +53,21 @@ trait Cacheable {
      */
     public function newEloquentBuilder($query)
     {
+        if ($this->useFullCache()) {
+            return new FullCacheQueryBuilder($query, $this);
+        }
+
         return new CacheQueryBuilder($query, $this);
+    }
+
+    public static function cacheAll()
+    {
+        static::query()
+            // todo
+            //->withTrashed()
+            ->withoutGlobalScopes()
+            ->get()
+            ->each->cache();
     }
 
 

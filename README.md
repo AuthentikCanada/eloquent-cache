@@ -19,13 +19,15 @@ Install via [composer](https://getcomposer.org/) :
 
 `composer require authentik/eloquent-cache`
 
-## How it works
+### Partial Cache
+
+#### How it works
 
 - When Eloquent fetches models, the JSON representations of the model instances are cached.
 
 - Subsequently, when eloquent fetches a model by ID, the cached JSON will be converted back into an instance.
 
-## Usage
+#### Usage
 
 Use the `Cacheable` trait in the models you want to cache.
 
@@ -91,4 +93,47 @@ Category::flush(Category::find(1));
 
 ```php
 Category::flush();
+```
+
+### Full Cache
+
+#### How it works
+
+- When eloquent is about to execute a SQL query against a full-cache model:
+
+    - If the cache is empty, all the model instances will be retrieved (without global scopes and with soft-deleted instances) and put into the cache.
+
+    - This module will take over before the query execution and will convert the `SQL where conditions` into PHP code that will be ran against the collection of cached model instances.
+
+#### Usage
+
+Use the `Cacheable` trait in the models you want to cache.
+
+```php
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Authentik\EloquentCache\Cacheable;
+
+class Category extends Model
+{
+    use Cacheable;
+
+
+    /*
+     * You can optionally override the following functions:
+     */ 
+
+    // default value: the lowercase name of the model
+    public function getCacheTagName() {
+        return 'cat';
+    }
+
+    // default value: false
+    public function useFullCache() {
+        return false;
+    }
+}
 ```
