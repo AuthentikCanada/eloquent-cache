@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
-class CacheQueryBuilder extends Builder {
+class PartialCacheQueryBuilder extends Builder {
     public static $staticCache = [];
 
     public function __construct($query, Model $model)

@@ -2,7 +2,7 @@
 namespace Tests;
 
 use Tests\Models\{Category, CustomCategory, Product};
-use Authentik\EloquentCache\CacheQueryBuilder;
+use Authentik\EloquentCache\PartialCacheQueryBuilder;
 use Illuminate\Database\Eloquent\Model;
 
 class CacheableTest extends BaseTestCase
@@ -20,9 +20,9 @@ class CacheableTest extends BaseTestCase
         $instance = $model = Category::first();
         $builder = $instance->newQueryWithoutScopes();
 
-        $this->assertInstanceOf(\Authentik\EloquentCache\CacheQueryBuilder::class, $builder);
+        $this->assertInstanceOf(PartialCacheQueryBuilder::class, $builder);
         $this->assertNotNull($this->getCachedInstance($model, $instance->id));
-        $this->assertArrayNotHasKey('category', CacheQueryBuilder::$staticCache);
+        $this->assertArrayNotHasKey('category', PartialCacheQueryBuilder::$staticCache);
 
         $cachedInstance = $this->getCachedInstance($model, $instance->id);
         $this->assertTrue($cachedInstance->is($instance));
@@ -87,20 +87,20 @@ class CacheableTest extends BaseTestCase
         $instances = CustomCategory::whereIn('id', $ids)->get();
         $model = $instances->first();
 
-        $this->assertArrayHasKey('custom_category', CacheQueryBuilder::$staticCache);
+        $this->assertArrayHasKey('custom_category', PartialCacheQueryBuilder::$staticCache);
 
         foreach ($ids as $id) {
             $this->assertNotNull($this->getCachedInstance($model, $id));
-            $this->assertArrayHasKey($id, CacheQueryBuilder::$staticCache['custom_category']);
+            $this->assertArrayHasKey($id, PartialCacheQueryBuilder::$staticCache['custom_category']);
         }
 
         CustomCategory::flush($instances->where('id', $ids[0])->first());
 
         $this->assertNull($this->getCachedInstance($model, $ids[0]));   
-        $this->assertArrayNotHasKey($ids[0], CacheQueryBuilder::$staticCache['custom_category']);
+        $this->assertArrayNotHasKey($ids[0], PartialCacheQueryBuilder::$staticCache['custom_category']);
 
         $this->assertNotNull($this->getCachedInstance($model, $ids[1]));   
-        $this->assertArrayHasKey($ids[1], CacheQueryBuilder::$staticCache['custom_category']);
+        $this->assertArrayHasKey($ids[1], PartialCacheQueryBuilder::$staticCache['custom_category']);
 
 
 
@@ -108,7 +108,7 @@ class CacheableTest extends BaseTestCase
 
         foreach ($ids as $id) {
             $this->assertNull($this->getCachedInstance($model, $id));   
-            $this->assertArrayNotHasKey($id, CacheQueryBuilder::$staticCache['custom_category']);
+            $this->assertArrayNotHasKey($id, PartialCacheQueryBuilder::$staticCache['custom_category']);
         }
     }
 

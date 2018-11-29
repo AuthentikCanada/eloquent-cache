@@ -2,7 +2,6 @@
 namespace Tests;
 
 use Tests\Models\CustomCategory;
-use Authentik\EloquentCache\CacheQueryBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 

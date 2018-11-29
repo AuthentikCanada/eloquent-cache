@@ -3,6 +3,7 @@
 namespace Authentik\EloquentCache;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 trait Cacheable {
     public function getCacheTTL() {
@@ -57,14 +58,15 @@ trait Cacheable {
             return new FullCacheQueryBuilder($query, $this);
         }
 
-        return new CacheQueryBuilder($query, $this);
+        return new PartialCacheQueryBuilder($query, $this);
     }
 
     public static function cacheAll()
     {
         static::query()
-            // todo
-            //->withTrashed()
+            ->when(in_array(SoftDeletes::class, array_keys(class_uses(static::class))), function ($query) {
+                return $query->withTrashed();
+            })
             ->withoutGlobalScopes()
             ->get()
             ->each->cache();
@@ -77,23 +79,25 @@ trait Cacheable {
 
         $tagName = $this->getCacheTagName();
 
-        if ($this->getCacheTTL() > 0) {
+        if (!$this->useFullCache()) {
+            if ($this->getCacheTTL() > 0) {
 
-            Cache::tags($tagName)
-                ->remember($keyValue, $this->getCacheTTL(), function () {
-                    return $this->attributesToArray();
-                });
+                Cache::tags($tagName)
+                    ->remember($keyValue, $this->getCacheTTL(), function () {
+                        return $this->attributesToArray();
+                    });
 
-        } else {
+            } else {
 
-            Cache::tags($tagName)
-                ->rememberForever($keyValue, function () {
-                    return $this->attributesToArray();
-                });
+                Cache::tags($tagName)
+                    ->rememberForever($keyValue, function () {
+                        return $this->attributesToArray();
+                    });
+            }
         }
 
         if ($this->isStaticCacheEnabled()) {
-            CacheQueryBuilder::$staticCache[$tagName][$keyValue] = $this;
+            PartialCacheQueryBuilder::$staticCache[$tagName][$keyValue] = $this;
         }
     }
 
@@ -106,6 +110,8 @@ trait Cacheable {
 
 
     public static function flush($model = null) {
+        // todo: handle full cache ...
+        
         if (is_null($model)) {
             $model = new static;
             $tagName = $model->getCacheTagName();
@@ -113,7 +119,7 @@ trait Cacheable {
             Cache::tags($tagName)->flush();
 
             if ($model->isStaticCacheEnabled()) {
-                CacheQueryBuilder::$staticCache[$tagName] = [];
+                PartialCacheQueryBuilder::$staticCache[$tagName] = [];
             }
 
         } else {
@@ -125,8 +131,8 @@ trait Cacheable {
             Cache::tags($tagName)->forget($keyValue);
 
             if ($model->isStaticCacheEnabled()) {
-                if (isset(CacheQueryBuilder::$staticCache[$tagName][$keyValue])) {
-                    unset(CacheQueryBuilder::$staticCache[$tagName][$keyValue]);
+                if (isset(PartialCacheQueryBuilder::$staticCache[$tagName][$keyValue])) {
+                    unset(PartialCacheQueryBuilder::$staticCache[$tagName][$keyValue]);
                 }
             }
         }
