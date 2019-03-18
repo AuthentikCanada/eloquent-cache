@@ -200,17 +200,24 @@ class CacheableTest extends TestCase
         $instance = $model = Category::first();
 
         $instance->parent_id = 20;
-        $instance = $instance->parent;
 
-        $this->assertNotNull($this->getCachedInstance($model, $instance->id));
+        $relations = ['parent', 'hasOneParent'];
+        foreach ($relations as $relation) {
+            $instance = $model->{$relation};
 
-        $cachedInstance = $this->getCachedInstance($model, $instance->id);
+            $this->assertNotNull($this->getCachedInstance($model, $instance->id));
 
-        $this->assertInstanceOf(Category::class, $instance);
-        $this->assertInstanceOf(Category::class, $cachedInstance);
+            $cachedInstance = $this->getCachedInstance($model, $instance->id);
 
-        $this->assertEquals(20, $instance->id);
-        $this->assertEquals(20, $cachedInstance->id);
+            $this->assertInstanceOf(Category::class, $instance);
+            $this->assertInstanceOf(Category::class, $cachedInstance);
+
+            $this->assertEquals(20, $instance->id);
+            $this->assertEquals(20, $cachedInstance->id);
+
+            Category::flush();
+        }
+
     }
 
     public function testEagerLoading() {
