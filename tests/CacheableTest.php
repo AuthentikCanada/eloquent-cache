@@ -3,10 +3,16 @@ namespace Tests;
 
 use Orchestra\Testbench\TestCase;
 use Illuminate\Support\Facades\Cache;
-use Tests\Models\{Category, CustomCategory, Product};
+use Tests\Models\{
+    Category,
+    CustomCategory,
+    Product,
+    CategorySoftDelete,
+};
 use Authentik\EloquentCache\CacheQueryBuilder;
 use Orchestra\Database\ConsoleServiceProvider;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class CacheableTest extends TestCase
 {
@@ -47,10 +53,22 @@ class CacheableTest extends TestCase
         return $method->invokeArgs($object, $parameters);
     }
 
-    protected function getCachedInstance(Model $model, $id) {
+    protected function getCachedInstance(Model $model, $id, $nullConditions = null) {
         $builder = $model->newQueryWithoutScopes();
 
-        return $this->invokeMethod($builder, 'getCachedInstance', [$id]);
+        if ($nullConditions) {
+            $tmp = $nullConditions;
+            $nullConditions = new Collection(null);
+
+            foreach ($tmp as $k => $v) {
+                $nullConditions->push([
+                    'column' => $k,
+                    'type' => $v,
+                ]);
+            }
+        }
+
+        return $this->invokeMethod($builder, 'getCachedInstance', [$id, $nullConditions]);
     }
 
     public function testCache() {
@@ -243,6 +261,26 @@ class CacheableTest extends TestCase
 
         $this->assertTrue($cachedInstance->is($instance));
         $this->assertInstanceOf(Category::class, $cachedInstance->parent);
+    }
+
+    public function testSoftDelete() {
+        factory(CategorySoftDelete::class, 2)->create();
+
+        $model = CategorySoftDelete::find(1);
+        $this->assertNotNull($this->getCachedInstance($model, 1));
+        $this->assertNotNull($this->getCachedInstance($model, 1, ['deleted_at' => 'Null']));
+        $this->assertNull($this->getCachedInstance($model, 1, ['deleted_at' => 'NotNull']));
+
+        CategorySoftDelete::find(2)->delete();
+        $this->assertNull($this->getCachedInstance($model, 2));
+
+        $model = CategorySoftDelete::withTrashed()
+            ->whereNotNull('deleted_at')
+            ->find(2);
+
+        $this->assertNotNull($this->getCachedInstance($model, 2));
+        $this->assertNotNull($this->getCachedInstance($model, 2, ['deleted_at' => 'NotNull']));
+        $this->assertNull($this->getCachedInstance($model, 2, ['deleted_at' => 'Null']));
     }
 
     public function testComplicatedQueries() {

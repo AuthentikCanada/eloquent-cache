@@ -12,6 +12,7 @@ class CreateCategory extends Migration
             $table->integer('parent_id')->nullable()->index();
             $table->string('name');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

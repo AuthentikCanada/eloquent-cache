@@ -3,12 +3,14 @@
 namespace Authentik\EloquentCache;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class CacheQueryBuilder extends Builder {
     public static $staticCache = [];
+    protected $_query = null;
 
     public function __construct($query, Model $model)
     {
@@ -21,6 +23,7 @@ class CacheQueryBuilder extends Builder {
     }
 
     public function get($columns = ['*']) {
+        $this->_query = $this->applyScopes()->getQuery();
 
         if (!$this->isBasicSelect($columns)) {
             return parent::get($columns);
@@ -35,15 +38,19 @@ class CacheQueryBuilder extends Builder {
             
             return $results;
         }
-        
-        $w = $this->getQuery()->wheres[0];
-        $results = new Collection(null);
+
+        $model = $this->getModel();
+        $table = $model->getTable();
+        $keyName = $model->getKeyName();
+
+        list($wheres, $keyCondition, $nullConditions) = $this->getGroupedWhereConditions();
+        $results = new EloquentCollection(null);
 
 
-        if ($w['type'] == 'Basic' && $w['operator'] == '=') {
+        if ($keyCondition['type'] == 'Basic' && $keyCondition['operator'] == '=') {
 
-            $keyValue = $w['value'];
-            $instance = $this->getCachedInstance($keyValue);
+            $keyValue = $keyCondition['value'];
+            $instance = $this->getCachedInstance($keyValue, $nullConditions);
 
             if (!$instance) {
                 if (is_null($instance = $this->getInstance($keyValue))) {
@@ -56,12 +63,12 @@ class CacheQueryBuilder extends Builder {
             $results->push($instance);
             return $results;
 
-        } else if ($w['type'] == 'In') {
+        } else if ($keyCondition['type'] == 'In') {
 
             $notFound = [];
 
-            foreach ($w['values'] as $keyValue) {
-                if (!is_null($instance = $this->getCachedInstance($keyValue))) {
+            foreach ($keyCondition['values'] as $keyValue) {
+                if (!is_null($instance = $this->getCachedInstance($keyValue, $nullConditions))) {
                     $results->push($instance);
                 } else {
                     $notFound[] = $keyValue;
@@ -73,7 +80,7 @@ class CacheQueryBuilder extends Builder {
 
                 $this->query->wheres = [];
                 $this->query->bindings['where'] = [];
-                $this->query->whereIn($w['column'], $notFound);
+                $this->query->whereIn($keyCondition['column'], $notFound);
 
                 $notFoundInstances = parent::get($columns);
                 $notFoundInstances->each(function ($instance) {
@@ -94,28 +101,101 @@ class CacheQueryBuilder extends Builder {
     }
 
 
-    /*
-     * Figures out if the current query results can be cached.
-     *
-     * - FROM `table` WHERE key = x
-     * - FROM `table` WHERE key IN (x1, x2)
-     */
-    protected function isBasicQuery() {
-        $query = $this->getQuery();
+    protected function getWhereConditions()
+    {
+        $query = $this->_query;
 
-        if (is_null($query->wheres) || count($query->wheres) != 1) {
-            return false;
+        if (is_null($query->wheres)) {
+            return [];
         }
-
-        $w = $query->wheres[0];
 
         $model = $this->getModel();
         $table = $model->getTable();
         $keyName = $model->getKeyName();
 
-        return isset($w['column']) &&
-            ($w['column'] == $keyName || $w['column'] == $table.'.'.$keyName) &&
-            ($w['type'] == 'In' || ($w['type'] == 'Basic' && $w['operator'] == '='));
+        return new Collection(array_map(function($w) use ($table, $keyName) {
+            if (!isset($w['column'])) {
+                return ['table' => null, 'column' => null];
+            }
+
+            $where = [
+                'column' => $w['column'],
+                'table' => $table,
+            ];
+
+            if (strpos($where['column'], '.') !== false) {
+                $arr = explode('.', $where['column']);
+
+                $where['table'] = $arr[0];
+                $where['column'] = $arr[1];
+            }
+
+            $where['type'] = $w['type'];
+            $attributes = ['operator', 'value', 'values'];
+            foreach ($attributes as $attribute) {
+                if (isset($w[$attribute])) {
+                    $where[$attribute] = $w[$attribute];
+                }
+            }
+
+            return $where;
+        }, $query->wheres));
+    }
+
+
+    /*
+     * Splits the query's where conditions into 3 groups
+     *
+     * - ALL the wheres
+     * - the condition on the primary key (in() or = condition)
+     * - IS NULL/IS NOT NULL conditions on the main table's columns
+     */
+    protected function getGroupedWhereConditions() {
+        $query = $this->_query;
+
+        $wheres = $this->getWhereConditions();
+
+        if ($wheres->isEmpty()) {
+            return [
+                new Collection(null),
+                null,
+                new Collection(null)
+            ];
+        }
+
+        $model = $this->getModel();
+        $table = $model->getTable();
+        $keyName = $model->getKeyName();
+
+        $nullConditions = $wheres->filter(function ($w) use ($table) {
+            return in_array($w['type'], ['Null', 'NotNull']) && $w['table'] == $table;
+        })->values();
+
+        $keyCondition = $wheres->filter(function ($w) use ($table, $keyName) {
+            return 
+                $w['table'] == $table &&
+                $w['column'] == $keyName &&
+                ($w['type'] == 'In' || ($w['type'] == 'Basic' && $w['operator'] == '='));
+        })->first();
+
+        return [$wheres, $keyCondition, $nullConditions];
+    }
+
+
+    /*
+     * Figures out if the current query results can be cached.
+     *
+     * - FROM `table` WHERE key = x
+     * - FROM `table` WHERE key IN (x1, x2)
+     * - AND x IS NOT or y IS NOT NULL
+     */
+    protected function isBasicQuery() {
+        list($wheres, $keyCondition, $nullConditions) = $this->getGroupedWhereConditions();
+
+        // Only one condition on the primary key (in() or = condition)
+        // Unlimited IS NULL/IS NOT NULL conditions on the main table's columns
+        // No extra conditions
+        return ($keyCondition && count($nullConditions) + 1 == count($wheres));
     }
 
 
@@ -123,7 +203,7 @@ class CacheQueryBuilder extends Builder {
      * Figures out if ONLY all the columns of the main model are selected
      */
     protected function isBasicSelect($columns) {
-        $selectedColumns = $this->getQuery()->columns ?: $columns;
+        $selectedColumns = $this->_query->columns ?: $columns;
 
         $table = $this->getModel()->getTable();
 
@@ -132,10 +212,29 @@ class CacheQueryBuilder extends Builder {
     }
 
 
+    protected function filterNullCondition($instance, $nullConditions) {
+        if (is_null($nullConditions)) {
+            return $instance;
+        }
+
+        foreach ($nullConditions as $w) {
+            if ($w['type'] == 'Null' && !is_null($instance->{$w['column']})) {
+                return null;
+            }
+
+            if ($w['type'] == 'NotNull' && is_null($instance->{$w['column']})) {
+                return null;
+            }
+        }
+
+        return $instance;
+    }
+
+
     /*
      * Retrieves a model instance from the cache, by ID.
      */
-    protected function getCachedInstance($keyValue) {
+    protected function getCachedInstance($keyValue, $nullConditions = null) {
         $model = $this->getModel();
 
         $tagName = $model->getCacheTagName();
@@ -144,7 +243,7 @@ class CacheQueryBuilder extends Builder {
             $keyName = $model->getKeyName();
 
             if (isset(self::$staticCache[$tagName][$model->{$keyName}])) {
-                return self::$staticCache[$tagName][$model->{$keyName}];
+                return $this->filterNullCondition(self::$staticCache[$tagName][$model->{$keyName}], $nullConditions);
             }
         }
 
@@ -154,7 +253,7 @@ class CacheQueryBuilder extends Builder {
             $instance = $model->newInstance([], true);
             $instance = $instance->forceFill($cached);
 
-            return $instance;
+            return $this->filterNullCondition($instance, $nullConditions);
         }
         
         return null;
