@@ -39,10 +39,6 @@ class CacheQueryBuilder extends Builder {
             return $results;
         }
 
-        $model = $this->getModel();
-        $table = $model->getTable();
-        $keyName = $model->getKeyName();
-
         list($wheres, $keyCondition, $nullConditions) = $this->getGroupedWhereConditions();
         $results = new EloquentCollection(null);
 
