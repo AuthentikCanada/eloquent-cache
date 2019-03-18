@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CacheableTest extends TestCase
 {
-    public function setUp() {
+    protected function setUp(): void {
         parent::setUp();
 
         $this->withFactories(__DIR__ . '/database/factories');

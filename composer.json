@@ -11,9 +11,9 @@
     ],
     "require": {
         "php": ">=7.0",
-        "illuminate/cache": "5.4 - 5.7",
-        "illuminate/database": "5.4 - 5.7",
-        "illuminate/support": "5.4 - 5.7"
+        "illuminate/cache": "5.4 - 5.8",
+        "illuminate/database": "5.4 - 5.8",
+        "illuminate/support": "5.4 - 5.8"
     },
     "require-dev": {
         "orchestra/testbench": "~3.6",
