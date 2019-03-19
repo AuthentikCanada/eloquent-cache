@@ -7,7 +7,7 @@ use Tests\Models\{
     Category,
     CustomCategory,
     Product,
-    CategorySoftDelete,
+    CategorySoftDelete
 };
 use Authentik\EloquentCache\CacheQueryBuilder;
 use Orchestra\Database\ConsoleServiceProvider;
