@@ -5,7 +5,7 @@ use Tests\Models\{
 	Category,
 	CustomCategory,
 	Product,
-	CategorySoftDelete,
+	CategorySoftDelete
 };
 
 $factory->define(Category::class, function (Faker $faker) {
