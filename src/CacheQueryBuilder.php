@@ -164,11 +164,15 @@ class CacheQueryBuilder extends Builder {
         $keyName = $model->getKeyName();
 
         $nullConditions = $wheres->filter(function ($w) use ($table) {
-            return in_array($w['type'], ['Null', 'NotNull']) && $w['table'] == $table;
+            return
+                !is_null($w['column']) &&
+                in_array($w['type'], ['Null', 'NotNull']) &&
+                $w['table'] == $table;
         })->values();
 
         $keyCondition = $wheres->filter(function ($w) use ($table, $keyName) {
-            return 
+            return
+                !is_null($w['column']) &&
                 $w['table'] == $table &&
                 $w['column'] == $keyName &&
                 ($w['type'] == 'In' || ($w['type'] == 'Basic' && $w['operator'] == '='));
