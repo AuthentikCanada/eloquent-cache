@@ -92,3 +92,7 @@ Category::flush(Category::find(1));
 ```php
 Category::flush();
 ```
+
+## Changelog
+
+[Click Here](CHANGELOG.md)
