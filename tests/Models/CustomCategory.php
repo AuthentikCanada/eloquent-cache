@@ -2,6 +2,8 @@
 namespace Tests\Models;
 
 class CustomCategory extends Category {
+    protected $appends = ['is_admin'];
+
 	public function getCacheTTL() {
         return 5;
     }
@@ -15,6 +17,10 @@ class CustomCategory extends Category {
     }
 
     public function isStaticCacheEnabled() {
+        return true;
+    }
+
+    public function getIsAdminAttribute() {
         return true;
     }
 }

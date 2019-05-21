@@ -63,20 +63,34 @@ trait Cacheable {
 
             Cache::tags($tagName)
                 ->remember($keyValue, $this->getCacheTTL(), function () {
-                    return $this->attributesToArray();
+                    return $this->attributesCacheToArray();
                 });
 
         } else {
 
             Cache::tags($tagName)
                 ->rememberForever($keyValue, function () {
-                    return $this->attributesToArray();
+                    return $this->attributesCacheToArray();
                 });
         }
 
         if ($this->isStaticCacheEnabled()) {
             CacheQueryBuilder::$staticCache[$tagName][$keyValue] = $this;
         }
+    }
+
+
+    protected function attributesCacheToArray()
+    {
+        $attributes = $this->attributesToArray();
+
+        $appends = $this->getArrayableAppends();
+
+        foreach (array_keys($appends) as $key) {
+            unset($attributes[$key]);
+        }
+
+        return $attributes;
     }
 
 

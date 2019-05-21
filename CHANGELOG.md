@@ -14,3 +14,6 @@ All notable changes to this project will be documented in this file.
 
 - Add ability to retrieve models that are using the SoftDeletes trait from the cache (or any kind of IS NULL/IS NOT NULL conditions)
 
+## 1.1.5 - 2019-05-21
+
+- Fix for models that have $appends attributes

@@ -325,4 +325,17 @@ class CacheableTest extends TestCase
         $this->assertNull($this->getCachedInstance($model, 10));
         $this->assertNull($this->getCachedInstance($model, 20));
     }
+
+    public function testModelAppends()
+    {
+        $models = CustomCategory::get();
+
+        // Retrieve from cache
+        $model = CustomCategory::find($models->first()->id);
+
+        // save() will crash `General error: 1 no such column: is_admin` if the $appends attributes
+        // are in the model's attributes
+        $model->save();
+        $this->assertTrue(true);
+    }
 }
