@@ -17,3 +17,7 @@ All notable changes to this project will be documented in this file.
 ## 1.1.5 - 2019-05-21
 
 - Fix for models that have $appends attributes
+
+## 1.1.7 - 2020-03-12
+
+- Avoid the 'This cache store does not support tagging.' exception
