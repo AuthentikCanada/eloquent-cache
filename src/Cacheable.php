@@ -54,6 +54,11 @@ trait Cacheable {
 
 
     public function cache() {
+        // To avoid the 'This cache store does not support tagging.' exception
+        if (!method_exists(app('cache')->store(), 'tags')) {
+            return;
+        }
+
         $keyName = $this->getKeyName();
         $keyValue = $this->{$keyName};
 
