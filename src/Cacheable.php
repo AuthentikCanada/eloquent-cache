@@ -14,6 +14,10 @@ trait Cacheable {
         return strtolower((new \ReflectionClass($this))->getShortName());
     }
 
+    public function isCacheEnabled() {
+        return true;
+    }
+
 
     public function isCacheBustingEnabled() {
         return true;
@@ -29,13 +33,13 @@ trait Cacheable {
 
     public static function boot() {
         static::saved(function ($model) {
-            if ($model->isCacheBustingEnabled()) {
+            if ($model->isCacheEnabled() && $model->isCacheBustingEnabled()) {
                 self::flush($model);
             }
         });
 
         static::deleted(function ($model) {
-            if ($model->isCacheBustingEnabled()) {
+            if ($model->isCacheEnabled() && $model->isCacheBustingEnabled()) {
                 self::flush($model);
             }
         });
@@ -54,8 +58,7 @@ trait Cacheable {
 
 
     public function cache() {
-        // To avoid the 'This cache store does not support tagging.' exception
-        if (!method_exists(app('cache')->store(), 'tags')) {
+        if (!$this->isCacheEnabled()) {
             return;
         }
 
@@ -107,6 +110,10 @@ trait Cacheable {
 
 
     public static function flush($model = null) {
+        if (!$this->isCacheEnabled()) {
+            return;
+        }
+
         if (is_null($model)) {
             $model = new static;
             $tagName = $model->getCacheTagName();
