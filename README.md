@@ -11,7 +11,7 @@
 
 - PHP>=7.0
 
-- Laravel 5.4, 5.5, 5.6, 5.7 or 5.8
+- Laravel 5.4, 5.5, 5.6, 5.7, 5.8 or 6.*
 
 ## Installation
 
