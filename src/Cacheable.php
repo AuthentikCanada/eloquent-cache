@@ -110,14 +110,16 @@ trait Cacheable {
 
 
     public static function flush($model = null) {
-        if (!$this->isCacheEnabled()) {
+        $deleteAll = is_null($model);
+
+        $model = $model ?? new static;
+        if (!$model->isCacheEnabled()) {
             return;
         }
 
-        if (is_null($model)) {
-            $model = new static;
-            $tagName = $model->getCacheTagName();
+        $tagName = $model->getCacheTagName();
 
+        if ($deleteAll) {
             Cache::tags($tagName)->flush();
 
             if ($model->isStaticCacheEnabled()) {
@@ -125,7 +127,6 @@ trait Cacheable {
             }
 
         } else {
-            $tagName = $model->getCacheTagName();
 
             $keyName = $model->getKeyName();
             $keyValue = $model->{$keyName};
