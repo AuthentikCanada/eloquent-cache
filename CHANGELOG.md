@@ -21,3 +21,7 @@ All notable changes to this project will be documented in this file.
 ## 1.1.7 - 2020-03-12
 
 - Avoid the 'This cache store does not support tagging.' exception
+
+## 1.1.9 - 2020-06-20
+
+- Add support for Laravel 7
