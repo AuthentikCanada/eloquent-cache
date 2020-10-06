@@ -25,3 +25,9 @@ All notable changes to this project will be documented in this file.
 ## 1.1.9 - 2020-06-20
 
 - Add support for Laravel 7
+
+## 1.2.0 - 2020-10-06
+
+- Add support for Laravel 8
+
+- Remove support for Laravel 5

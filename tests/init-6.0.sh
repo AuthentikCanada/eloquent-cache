@@ -3,7 +3,7 @@
 cp composer.json composer-backup.json
 
 composer require "phpunit/phpunit:8.3.*" --no-update -q
-composer require "orchestra/database:4.x-dev" --no-update -q
+composer require "orchestra/database:4.0.*" --no-update -q
 composer require "orchestra/testbench:4.0.*" --no-update -q
 composer require "illuminate/cache:6.0.*" --no-update -q
 composer require "illuminate/database:6.0.*" --no-update -q
