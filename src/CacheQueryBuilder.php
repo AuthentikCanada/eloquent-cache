@@ -252,6 +252,7 @@ class CacheQueryBuilder extends Builder {
         if ($cached) {
             $instance = $model->newInstance([], true);
             $instance = $instance->forceFill($cached);
+            $instance->syncOriginal();
 
             return $this->filterNullCondition($instance, $nullConditions);
         }
