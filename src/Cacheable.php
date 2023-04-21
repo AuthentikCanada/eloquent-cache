@@ -63,7 +63,7 @@ trait Cacheable {
         }
 
         $keyName = $this->getKeyName();
-        $keyValue = $this->{$keyName};
+        $keyValue = $this->getCurrentConnection()->getName().'_'.$this->{$keyName};
 
         $tagName = $this->getCacheTagName();
 
@@ -129,7 +129,8 @@ trait Cacheable {
         } else {
 
             $keyName = $model->getKeyName();
-            $keyValue = $model->{$keyName};
+            $keyValue = $model->getCurrentConnection()->getName().'_'.$model->{$keyName};
+
 
             Cache::tags($tagName)->forget($keyValue);
 
